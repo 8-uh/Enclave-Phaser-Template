@@ -1,5 +1,5 @@
 const COLLECTIBLES = [
-	{ texture: '10-cent', value: 10 },
+	{ texture: '10-cent', value: 10},
 	{ texture: '20-cent', value: 20 },
 	{ texture: '50-cent', value: 50 },
 	{ texture: '1-dollar', value: 100 },
@@ -18,11 +18,17 @@ const {ceil} = Math
 EPT.Game = function(game) {};
 EPT.Game.prototype = {
 	init(level = 1) {
+		this.level = level
 		this.numDrops = LEVELS[level - 1]
 	},
 	create: function() {
+		if(!EPT.Storage) {
+			EPT.Storage = this.game.plugins.add(Phaser.Plugin.Storage);
+			EPT.Storage.initUnset('EPT-highscore', 0);
+		}
 		this._score = 0;
-		this._time = 90;
+		this._total = 0
+		this._time = GAME_TIME;
 		this.gamePaused = false;
 		this.runOnce = false;
 		this.frameDrops = this.createFrameDrops()
@@ -60,20 +66,21 @@ EPT.Game.prototype = {
 		this.cursors = game.input.keyboard.createCursorKeys();
 
 
-		//
-		// this.currentTimer = game.time.create();
-		// this.currentTimer.loop(Phaser.Timer.SECOND, function() {
-		// 	this._time--;
-		// 	if(this._time) {
-		// 		this.textTime.setText('Time left: '+this._time);
-		// 	}
-		// 	else {
-		// 		this.stateStatus = 'gameover';
-		// 	}
-		// }, this);
-		// this.currentTimer.start();
 
-		// this.initUI();
+		this.currentTimer = game.time.create();
+		this.currentTimer.loop(Phaser.Timer.SECOND, function() {
+			this._time--;
+			if(this._time) {
+				this.textTime.setText('Time left: '+this._time);
+			}
+			else {
+				this.stateStatus = 'gameover';
+			}
+		}, this);
+		this.currentTimer.start();
+
+		this.initUI();
+		this.stateStatus = 'playing'
 
 		// this.camera.resetFX();
 		// this.camera.flash(0x000000, 500, false);
@@ -100,8 +107,6 @@ EPT.Game.prototype = {
 		this.player.body.setSize(this.player.width*1.2, this.player.height * 0.15, this.player.width * 1.1, 0 )
 		this.player.body.collideWorldBounds = true
 
-
-
 		this.grassMid.x = 0
 		this.grassMid.y = height
 
@@ -115,16 +120,16 @@ EPT.Game.prototype = {
 		this.add.existing(this.mountain)
 		this.add.existing(this.sign)
 		this.add.existing(this.grassBack)
-
 		this.coins = this.game.add.group()
 		this.add.existing(this.grassMid)
+		this.add.existing(this.player)
 		this.add.existing(this.grassFront)
-this.add.existing(this.player)
+		this.popups = this.game.add.group()
 
 
 	},
 	createFrameDrops: function() {
-		const droptween = this.add.tween({drops: 0, choices:0}).to({drops: this.numDrops, choices: 6}, (GAME_TIME - 10) * 1000)
+		const droptween = this.add.tween({drops: 0, choices:0}).to({drops: this.numDrops, choices: 6}, (GAME_TIME - 5) * 1000)
 		let currentDrop = 0
 		const dropdata = droptween.generateData().reduce(
 			(arr, item, idx) => {
@@ -158,33 +163,41 @@ this.add.existing(this.player)
 
 		this.screenPausedGroup = this.add.group();
 		this.screenPausedBg = this.add.sprite(0, 0, 'overlay');
-		this.screenPausedText = this.add.text(this.world.width*0.5, 100, 'Paused', fontTitle);
+		this.screenPausedBg.alpha = 0.75
+		this.screenPausedText = this.add.text(this.world.width*0.5, 100, 'PAUSED', fontTitle);
 		this.screenPausedText.anchor.set(0.5,0);
-		this.buttonAudio = this.add.button(this.world.width-20, 20, 'button-audio', this.clickAudio, this, 1, 0, 2);
-		this.buttonAudio.anchor.set(1,0);
+		// this.buttonAudio = this.add.button(this.world.width-20, 20, 'button-audio', this.clickAudio, this, 1, 0, 2);
+		// this.buttonAudio.anchor.set(1,0);
 		this.screenPausedBack = this.add.button(150, this.world.height-100, 'button-mainmenu', this.stateBack, this, 1, 0, 2);
 		this.screenPausedBack.anchor.set(0,1);
 		this.screenPausedContinue = this.add.button(this.world.width-150, this.world.height-100, 'button-continue', this.managePause, this, 1, 0, 2);
 		this.screenPausedContinue.anchor.set(1,1);
 		this.screenPausedGroup.add(this.screenPausedBg);
 		this.screenPausedGroup.add(this.screenPausedText);
-		this.screenPausedGroup.add(this.buttonAudio);
+		//this.screenPausedGroup.add(this.buttonAudio);
 		this.screenPausedGroup.add(this.screenPausedBack);
 		this.screenPausedGroup.add(this.screenPausedContinue);
 		this.screenPausedGroup.visible = false;
 
-		this.buttonAudio.setFrames(EPT._audioOffset+1, EPT._audioOffset+0, EPT._audioOffset+2);
+		//this.buttonAudio.setFrames(EPT._audioOffset+1, EPT._audioOffset+0, EPT._audioOffset+2);
 
 		this.screenGameoverGroup = this.add.group();
+
 		this.screenGameoverBg = this.add.sprite(0, 0, 'overlay');
-		this.screenGameoverText = this.add.text(this.world.width*0.5, 100, 'Game over', fontTitle);
+		this.screenGameoverBg.alpha = 0.75
+
+		this.screenGameoverText = this.add.text(this.world.width*0.5, 100, 'GAME OVER', fontTitle);
 		this.screenGameoverText.anchor.set(0.5,0);
+
 		this.screenGameoverBack = this.add.button(150, this.world.height-100, 'button-mainmenu', this.stateBack, this, 1, 0, 2);
-		this.screenGameoverBack.anchor.set(0,1);
+		this.screenGameoverBack.anchor.setTo(0,1);
+
 		this.screenGameoverRestart = this.add.button(this.world.width-150, this.world.height-100, 'button-restart', this.stateRestart, this, 1, 0, 2);
-		this.screenGameoverRestart.anchor.set(1,1);
-		this.screenGameoverScore = this.add.text(this.world.width*0.5, 300, 'Score: '+this._score, fontScoreWhite);
-		this.screenGameoverScore.anchor.set(0.5,0.5);
+		this.screenGameoverRestart.anchor.setTo(1);
+
+		this.screenGameoverScore = this.add.text(this.world.width*0.5, 300, 'Score: $'+this._score * 0.01, fontScoreWhite);
+		this.screenGameoverScore.anchor.setTo(0.5);
+
 		this.screenGameoverGroup.add(this.screenGameoverBg);
 		this.screenGameoverGroup.add(this.screenGameoverText);
 		this.screenGameoverGroup.add(this.screenGameoverBack);
@@ -193,34 +206,27 @@ this.add.existing(this.player)
 		this.screenGameoverGroup.visible = false;
 	},
 	update: function() {
-		// switch(this.stateStatus) {
-		// 	case 'paused': {
-		// 		if(!this.runOnce) {
-		// 			this.statePaused();
-		// 			this.runOnce = true;
-		// 		}
-		// 		break;
-		// 	}
-		// 	case 'gameover': {
-		// 		if(!this.runOnce) {
-		// 			this.stateGameover();
-		// 			this.runOnce = true;
-		// 		}
-		// 		break;
-		// 	}
-		// 	case 'playing': {
-		// 		this.statePlaying();
-		// 	}
-		// 	default: {
-		// 	}
-		// }
-
-		this.currentFrame++
-		this.checkFrameData()
-		this.checkInput()
-		this.checkCollisions()
-
-
+		switch(this.stateStatus) {
+			case 'paused': {
+				if(!this.runOnce) {
+					this.statePaused();
+					this.runOnce = true;
+				}
+				break;
+			}
+			case 'gameover': {
+				if(!this.runOnce) {
+					this.stateGameover();
+					this.runOnce = true;
+				}
+				break;
+			}
+			case 'playing': {
+				this.statePlaying();
+			}
+			default: {
+			}
+		}
 	},
 	checkFrameData: function() {
 		if(this.frameDrops.length) {
@@ -249,7 +255,7 @@ this.add.existing(this.player)
 	},
 	collectCoin: function(player, coin) {
 		coin.kill()
-		console.log('collected coin:', coin.collectibleValue)
+		this.addPoints(coin.collectibleValue)
 	},
 	dropCoin: function(choices) {
 		console.log('drop coin!')
@@ -285,23 +291,28 @@ this.add.existing(this.player)
 			}
 
 		})
+		this._total += props.value
 	},
-
-
 	managePause: function() {
 		this.gamePaused =! this.gamePaused;
 		EPT._playAudio('click');
 		if(this.gamePaused) {
 			this.stateStatus = 'paused';
+			this.game.physics.arcade.isPaused = true
 		}
 		else {
 			this.stateStatus = 'playing';
+			this.game.physics.arcade.isPaused = false
 			this.runOnce = false;
 		}
 	},
 	statePlaying: function() {
 		this.screenPausedGroup.visible = false;
 		this.currentTimer.resume();
+		this.currentFrame++
+		this.checkFrameData()
+		this.checkInput()
+		this.checkCollisions()
 	},
 	statePaused: function() {
 		this.screenPausedGroup.visible = true;
@@ -314,30 +325,42 @@ this.add.existing(this.player)
 		this.gameoverScoreTween();
 		EPT.Storage.setHighscore('EPT-highscore',this._score);
 	},
-	addPoints: function() {
-		this._score += 10;
-		this.textScore.setText('Score: '+this._score);
+	addPoints: function(points) {
+		this._score += points;
+		this.textScore.setText('Score: $'+ (this._score * 0.01).toFixed(2));
 		var randX = this.rnd.integerInRange(200,this.world.width-200);
 		var randY = this.rnd.integerInRange(200,this.world.height-200);
-		var pointsAdded = this.add.text(randX, randY, '+10',
-			{ font: "48px Arial", fill: "#000", stroke: "#FFF", strokeThickness: 10 });
-		pointsAdded.anchor.set(0.5, 0.5);
-		this.add.tween(pointsAdded).to({ alpha: 0, y: randY-50 }, 1000, Phaser.Easing.Linear.None, true);
-
-		this.camera.shake(0.01, 100, true, Phaser.Camera.SHAKE_BOTH, true);
+		const cdisplay = points < 100 ? '+c' + points : '+' + (points * 0.01) + '$'
+		let popup = this.popups.getFirstExists(false)
+		if(!popup) {
+			popup = this.add.text(0,0, cdisplay,
+				{ font: "48px Arial", fill: "#000", stroke: "#FFF", strokeThickness: 10 });
+			popup.anchor.set(0.5, 0.5);
+			this.popups.add(popup)
+		}
+		popup.text = cdisplay
+		popup.reset()
+		popup.x = randX
+		popup.y = randY
+		popup.alpha = 1
+		const popupTween = this.add.tween(popup).to({ alpha: 0, y: randY-50 }, 1000, Phaser.Easing.Linear.None, true);
+		popupTween.onComplete.add(() => {
+			popup.kill()
+		})
 	},
 	gameoverScoreTween: function() {
-		this.screenGameoverScore.setText('Score: 0');
+		this.screenGameoverScore.setText('Score: $0');
 		if(this._score) {
+			const money = this._score * 0.01
 			this.tweenedPoints = 0;
 			var pointsTween = this.add.tween(this);
-			pointsTween.to({ tweenedPoints: this._score }, 1000, Phaser.Easing.Linear.None, true, 500);
+			pointsTween.to({ tweenedPoints: money }, 1000, Phaser.Easing.Linear.None, true, 500);
 			pointsTween.onUpdateCallback(function(){
-				this.screenGameoverScore.setText('Score: '+Math.floor(this.tweenedPoints));
+				this.screenGameoverScore.setText('Score: $' + this.tweenedPoints.toFixed(2) );
 			}, this);
 			pointsTween.onComplete.addOnce(function(){
-				this.screenGameoverScore.setText('Score: '+this._score);
-				this.spawnEmitter(this.screenGameoverScore, 'particle', 20, 300);
+				this.screenGameoverScore.setText('Score: $' + money.toFixed(2));
+				//this.spawnEmitter(this.screenGameoverScore, 'particle', 20, 300);
 			}, this);
 			pointsTween.start();
 		}
@@ -367,7 +390,7 @@ this.add.existing(this.player)
 		this.runOnce = false;
 		this.currentTimer.start();
 		this.stateStatus = 'playing';
-		this.state.restart(true);
+		this.state.restart(true, false, this.level);
 	},
 	stateBack: function() {
 		EPT._playAudio('click');
@@ -380,9 +403,9 @@ this.add.existing(this.player)
 		this.state.start('MainMenu');
 	},
 	render: function() {
-		this.game.debug.body(this.player)
-		this.coins.forEachAlive(c => {
-			this.game.debug.body(c)
-		})
+		// this.game.debug.body(this.player)
+		// this.coins.forEachAlive(c => {
+		// 	this.game.debug.body(c)
+		// })
 	}
 };
