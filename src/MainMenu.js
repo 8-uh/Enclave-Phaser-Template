@@ -11,6 +11,7 @@ EPT.MainMenu.prototype = {
 		EPT.Storage = this.game.plugins.add(Phaser.Plugin.Storage);
 		EPT.Storage.initUnset('EPT-highscore', 0);
 		const highscore = EPT.Storage.get('EPT-highscore') || 0;
+		
 
 		// create menu spri
 		this.logo = this.make.sprite(0, 0, 'logo');
@@ -32,37 +33,25 @@ EPT.MainMenu.prototype = {
 		this.grassMid.anchor.setTo(0,1)
 
 		this.grassFront = this.make.sprite(0, 0, 'grass-front')
-		this.grassFront.anchor.setTo(1,1)
+		this.grassFront.anchor.setTo(1)
 
 		this.mathsLogo = this.make.sprite(0, 0, 'mathsweek-logo')
-		this.mathsLogo.anchor.setTo(1,1)
+		this.mathsLogo.anchor.setTo(1)
 
-		// this.buttonAudio = this.add.button(this.world.width-20, 20, 'button-audio', this.clickAudio, this, 1, 0, 2);
-		// this.buttonAudio.anchor.set(1,0);
-		//
-		// var buttonAchievements = this.add.button(20, this.world.height-20, 'button-achievements', this.clickAchievements, this, 1, 0, 2);
-		// buttonAchievements.anchor.set(0,1);
+		this.startbtn = this.make.button(0,0,'button-start', this.clickStart, this, 1, 0, 2)
+		this.startbtn.anchor.setTo(0.5)
 
-		const highscoreStyle = { font: "32px Arial", fill: "#000" };
-		const textHighscore = this.add.text(0, 0, 'Highscore: '+highscore, highscoreStyle);
-		textHighscore.anchor.set(0.5,1);
-
-		EPT._manageAudio('init',this);
-		// Turn the music off at the start:
-		EPT._manageAudio('off',this);
-
-		//this.add.tween(this.buttonAudio).to({y: 20}, 500, Phaser.//easing.Exponential.Out, true);
-
-		//this.add.tween(buttonAchievements).to({y: this.world.height-20}, 500, Phaser.//easing.Exponential.Out, true);
-
-		//this.camera.flash(0x000000, 500, false);
 		this.setStartingLocations()
 		if(this.firstrun) {
 			console.log('should start introanimation')
-			this.introAnimation()
+			const intro = this.introAnimation()
+			intro.then(() => {
+				console.log('intro finished')
+				this.setObjectLocations()
+			})
 		} else {
 			console.log('should set final object locations')
-			//this.setObjectLocations()
+			this.setObjectLocations()
 		}
 	},
 
@@ -97,6 +86,11 @@ EPT.MainMenu.prototype = {
 		this.mathsLogo.scale.setTo(0.5)
 		this.mathsLogo.alpha = 0
 
+		this.startbtn.x = -width * 0.5
+		this.startbtn.y = height * 0.9
+		this.startbtn.scale.setTo(0.5)
+		this.startbtn.visible = false
+
 		this.add.existing(this.sky)
 		this.add.existing(this.logo)
 		this.add.existing(this.mountain)
@@ -105,6 +99,7 @@ EPT.MainMenu.prototype = {
 		this.add.existing(this.grassMid)
 		this.add.existing(this.grassFront)
 		this.add.existing(this.mathsLogo)
+		this.add.existing(this.startbtn)
 		console.log('starting positons set')
 	},
 	introAnimation: function() {
@@ -118,6 +113,7 @@ EPT.MainMenu.prototype = {
 			grassMid,
 			grassFront,
 			mathsLogo,
+			startbtn
 		} = this
 
 		const {width, height} = this.world
@@ -128,52 +124,58 @@ EPT.MainMenu.prototype = {
 			targets: sky,
 			y: 0,
 			easing: `easeOutExpo`,
-			duration: 1250
+			duration: 500
 		})
 		.add({
 			targets: mountain,
 			y: height * 0.48,
 			easing: 'easeOutElastic',
-			duration: 1750,
-			offset: 5000
+			duration: 500,
+			offset: 1000
 		})
 		.add({
 			targets: grassBack,
 			y: height * 0.5 + this.grassBack.height * 0.3,
 			easing: 'easeOutBack',
-			offset: 1750,
+			offset: 500,
+			duration: 500
 		})
 		.add({
 			targets: grassMid,
 			x: 0,
 			easing: 'easeOutExpo',
-			offset: 1000,
-			duration: 750,
+			offset: 250,
+			duration: 500
 		})
 		.add({
 			targets: grassFront,
 			x: width,
 			easing: `easeOutExpo`,
-			duration: 750,
-			offset: 1000
+			duration: 250,
+			offset: 250
 		})
 		.add({
 			targets: sign,
 			y: height * 0.5,
-			easing: 'easeOutCirc'
+			duration: 500,
+			easing: 'easeOutCirc',
+			offset: 1000
 		})
 		.add({
 			targets: logo.scale,
 			x: 0.5,
 			y: 0.5,
+			duration: 500,
+			offset: 1500,
 			easing: 'easeOutElastic'
 		})
 		.add({
 			targets: mathsLogo,
-			alpha: 100,
-			//easing: 'linear'
+			alpha: 0.75,
+			duration: 500
 		})
-
+		console.log('timeline:', timeline)
+		return Promise.all(timeline.children.map(a => a.finished))
 	},
 	setObjectLocations: function() {
 		console.log('setObjectLocations')
@@ -193,24 +195,23 @@ EPT.MainMenu.prototype = {
 		this.logo.scale.setTo(0.5)
 
 
-		this.mathsLogo.alpha = 100
+		this.mathsLogo.alpha = 0.75
+
+		this.startbtn.x = width * 0.5
+		this.startbtn.y = height * 0.9
+		this.startbtn.visible = true
 
 
 
 	},
-
-
-	clickEnclave: function() {
-		EPT._playAudio('click');
-		window.top.location.href = 'http://enclavegames.com/';
-	},
-
 	clickStart: function() {
 		EPT._playAudio('click');
-		this.camera.fade(0x000000, 200, false);
-		this.time.events.add(200, function() {
-			this.game.state.start('Story');
-		}, this);
+		console.log('clickStart:', this.firstrun)
+		if(this.firstrun) {
+			this.game.state.start('Story')
+		} else {
+			this.game.state.start('Game')
+		}
 	},
 	clickAchievements: function() {
 		EPT._playAudio('click');

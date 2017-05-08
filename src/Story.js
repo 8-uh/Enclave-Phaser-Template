@@ -1,15 +1,92 @@
 EPT.Story = function(game) {};
 EPT.Story.prototype = {
 	create: function(){
-		var textStory = this.add.text(100, 75, 'Story screen', { font: "32px Arial", fill: "#000" });
-		var buttonContinue = this.add.button(this.world.width-20, game.world.height-20, 'button-continue', this.clickContinue, this, 1, 0, 2);
-		
-		buttonContinue.anchor.set(1,1);
-		buttonContinue.x = this.world.width+buttonContinue.width+20;
-		
-		this.add.tween(buttonContinue).to({x: this.world.width-20}, 500, Phaser.Easing.Exponential.Out, true);
+		const {width, height} = this.world
+		// initialize storage
+		EPT.Storage = this.game.plugins.add(Phaser.Plugin.Storage);
+		EPT.Storage.initUnset('EPT-highscore', 0);
+		const highscore = EPT.Storage.get('EPT-highscore') || 0;
 
-		this.camera.flash(0x000000, 500, false);
+		// create menu spri
+
+		this.sky = this.make.sprite(0, 0, 'sky')
+		this.sky.anchor.setTo(0.5, 0)
+
+		this.mountain = this.make.sprite(0, 0, 'mountain')
+		this.mountain.anchor.setTo(0.5)
+
+		this.sign = this.make.sprite(0, 0, 'sign')
+		this.sign.anchor.setTo(0.5, 0)
+
+		this.grassBack = this.make.sprite(0, 0, 'grass-back')
+		this.grassBack.anchor.setTo(0.5, 0)
+
+		this.grassMid = this.make.sprite(0, 0, 'grass-mid')
+		this.grassMid.anchor.setTo(0,1)
+
+		this.grassFront = this.make.sprite(0, 0, 'grass-front')
+		this.grassFront.anchor.setTo(1)
+
+		this.overlay = this.make.sprite(0, 0, 'overlay');
+		this.title = this.make.text(0, 0, 'FPO Instructions Title', { font: "32px Arial", fill: "#fff" });
+		this.instructions = this.make.text(0, 0, 'FPO instructions text\nsomething something something catch coins', {font: "16px Arial", fill:"#fff"})
+
+		this.continuebtn = this.make.button(0, 0, 'button-continue', this.clickContinue, this, 1, 0, 2);
+		this.continuebtn.anchor.set(1,1);
+
+		this.setObjectLocations()
+
+
+	},
+
+	setObjectLocations: function() {
+		console.log('setObjectLocations')
+		const {width, height} = this.world
+
+		this.sky.x = width * 0.5
+		this.sky.y = 0
+
+		this.mountain.x = width * 0.5
+		this.mountain.y = height * 0.48
+
+		this.grassBack.x = width * 0.5
+		this.grassBack.y = height * 0.5 + this.grassBack.height * 0.3
+
+		this.grassMid.x = 0
+		this.grassMid.y = height
+
+		this.grassFront.x = width
+		this.grassFront.y = height
+
+		this.sign.x = width * 0.8
+		this.sign.y = height * 0.5
+
+		this.continuebtn.x = width - 20
+		this.continuebtn.y = height - 20
+
+		this.overlay.width = width
+		this.overlay.height = height
+		this.overlay.alpha = 0.75
+
+		this.title.x = width * 0.1
+		this.title.y = height * 0.1
+
+		this.instructions.x = width * 0.1
+		this.instructions.y = height * 0.2
+
+
+		this.add.existing(this.sky)
+		this.add.existing(this.mountain)
+		this.add.existing(this.sign)
+		this.add.existing(this.grassBack)
+		this.add.existing(this.grassMid)
+		this.add.existing(this.grassFront)
+		this.add.existing(this.overlay)
+		this.add.existing(this.title)
+		this.add.existing(this.instructions)
+		this.add.existing(this.continuebtn)
+
+
 	},
 	clickContinue: function() {
 		EPT._playAudio('click');

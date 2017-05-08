@@ -17,7 +17,7 @@ EPT.Preloader.prototype = {
 		}
 	},
 	create: function() {
-		this.state.start('MainMenu', true, false, true);
+		this.state.start('Game', true, false, true);
 	}
 };
 EPT.Preloader.resources = {
@@ -49,7 +49,6 @@ EPT.Preloader.resources = {
 		['logo-enclave', 'img/logo-enclave.png'],
 		['clickme', 'img/clickme.png'],
 		['overlay', 'img/overlay.png'],
-		['button-beer', 'img/button-beer.png'],
 		['particle', 'img/particle.png']
 	],
 	'spritesheet': [

@@ -1,37 +1,134 @@
+const COLLECTIBLES = [
+	{ texture: '10-cent', value: 10 },
+	{ texture: '20-cent', value: 20 },
+	{ texture: '50-cent', value: 50 },
+	{ texture: '1-dollar', value: 100 },
+	{ texture: '2-dollar', value: 200 },
+	{ texture: '5-dollar', value: 500 }
+]
+
+const LEVELS = [100, 200, 300, 400, 500]
+const GAME_TIME = 30
+const COIN_SPEED = 100
+const PLAYER_SPEED = 10
+
+const {getRandomItem} = Phaser.ArrayUtils
+const {ceil} = Math
+
 EPT.Game = function(game) {};
 EPT.Game.prototype = {
+	init(level = 1) {
+		this.numDrops = LEVELS[level - 1]
+	},
 	create: function() {
 		this._score = 0;
-		this._time = 10;
+		this._time = 90;
 		this.gamePaused = false;
 		this.runOnce = false;
+		this.frameDrops = this.createFrameDrops()
+		this.game.physics.startSystem(Phaser.Physics.ARCADE);
+		game.physics.arcade.gravity.y = 0;
+		// var fontGameplay = { font: "32px Arial", fill: "#000" };
+		// var textGameplay = this.add.text(100, 75, 'Gameplay screen', fontGameplay);
 
-		var fontGameplay = { font: "32px Arial", fill: "#000" };
-		var textGameplay = this.add.text(100, 75, 'Gameplay screen', fontGameplay);
+		this.sky = this.make.sprite(0, 0, 'sky')
+		this.sky.anchor.setTo(0.5, 0)
 
-		var buttonDummy = this.add.button(this.world.width*0.5, this.world.height*0.5, 'clickme', this.addPoints, this);
-		buttonDummy.anchor.set(0.5,0.5);
-		buttonDummy.alpha = 0;
-		buttonDummy.scale.set(0.1);
-		this.add.tween(buttonDummy).to({alpha: 1}, 1000, Phaser.Easing.Exponential.Out, true);
-		this.add.tween(buttonDummy.scale).to({x: 1, y: 1}, 1000, Phaser.Easing.Exponential.Out, true);
+		this.mountain = this.make.sprite(0, 0, 'mountain')
+		this.mountain.anchor.setTo(0.5)
 
-		this.currentTimer = game.time.create();
-		this.currentTimer.loop(Phaser.Timer.SECOND, function() {
-			this._time--;
-			if(this._time) {
-				this.textTime.setText('Time left: '+this._time);
+		this.sign = this.make.sprite(0, 0, 'sign')
+		this.sign.anchor.setTo(0.5, 0)
+
+		this.grassBack = this.make.sprite(0, 0, 'grass-back')
+		this.grassBack.anchor.setTo(0.5, 0)
+
+		this.grassMid = this.make.sprite(0, 0, 'grass-mid')
+		this.grassMid.anchor.setTo(0,1)
+
+		this.grassFront = this.make.sprite(0, 0, 'grass-front')
+		this.grassFront.anchor.setTo(1)
+
+		this.player = this.make.sprite(0, 0, 'gertie')
+		this.player.anchor.setTo(0.5, 1)
+
+		this.setObjectLocations()
+
+		this.currentFrame = 0
+
+		this.cursors = game.input.keyboard.createCursorKeys();
+
+
+		//
+		// this.currentTimer = game.time.create();
+		// this.currentTimer.loop(Phaser.Timer.SECOND, function() {
+		// 	this._time--;
+		// 	if(this._time) {
+		// 		this.textTime.setText('Time left: '+this._time);
+		// 	}
+		// 	else {
+		// 		this.stateStatus = 'gameover';
+		// 	}
+		// }, this);
+		// this.currentTimer.start();
+
+		// this.initUI();
+
+		// this.camera.resetFX();
+		// this.camera.flash(0x000000, 500, false);
+
+	},
+	setObjectLocations: function() {
+		const {width, height} = this.world
+
+		this.sky.x = width * 0.5
+		this.sky.y = 0
+
+		this.mountain.x = width * 0.5
+		this.mountain.y = height * 0.48
+
+		this.grassBack.x = width * 0.5
+		this.grassBack.y = height * 0.5 + this.grassBack.height * 0.3
+
+		this.player.scale.setTo(0.4)
+		this.player.x = width * 0.5
+		this.player.y = this.grassBack.y + this.grassBack.height - this.player.height * 0.4
+
+		this.grassMid.x = 0
+		this.grassMid.y = height
+
+		this.grassFront.x = width
+		this.grassFront.y = height
+
+		this.sign.x = width * 0.8
+		this.sign.y = height * 0.5
+
+		this.add.existing(this.sky)
+		this.add.existing(this.mountain)
+		this.add.existing(this.sign)
+		this.add.existing(this.grassBack)
+		this.add.existing(this.player)
+		this.coins = this.game.add.group()
+		this.add.existing(this.grassMid)
+		this.add.existing(this.grassFront)
+
+
+	},
+	createFrameDrops: function() {
+		const droptween = this.add.tween({drops: 0, choices:0}).to({drops: this.numDrops, choices: 6}, (GAME_TIME - 10) * 1000)
+		let currentDrop = 0
+		const dropdata = droptween.generateData().reduce(
+			(arr, item, idx) => {
+				const drops = ~~item.drops
+				if(drops > currentDrop) {
+					const diff = drops - currentDrop
+					arr.push({frame: idx, drops: diff, choices: ceil(item.choices) - 1})
+					currentDrop += diff
+				}
+				return arr
 			}
-			else {
-				this.stateStatus = 'gameover';
-			}
-		}, this);
-		this.currentTimer.start();
-
-		this.initUI();
-
-		this.camera.resetFX();
-		this.camera.flash(0x000000, 500, false);
+		, [])
+		return dropdata
 	},
 	initUI: function() {
 		this.buttonPause = this.add.button(this.world.width-20, 20, 'button-pause', this.managePause, this, 1, 0, 2);
@@ -87,28 +184,78 @@ EPT.Game.prototype = {
 		this.screenGameoverGroup.visible = false;
 	},
 	update: function() {
-		switch(this.stateStatus) {
-			case 'paused': {
-				if(!this.runOnce) {
-					this.statePaused();
-					this.runOnce = true;
+		// switch(this.stateStatus) {
+		// 	case 'paused': {
+		// 		if(!this.runOnce) {
+		// 			this.statePaused();
+		// 			this.runOnce = true;
+		// 		}
+		// 		break;
+		// 	}
+		// 	case 'gameover': {
+		// 		if(!this.runOnce) {
+		// 			this.stateGameover();
+		// 			this.runOnce = true;
+		// 		}
+		// 		break;
+		// 	}
+		// 	case 'playing': {
+		// 		this.statePlaying();
+		// 	}
+		// 	default: {
+		// 	}
+		// }
+
+		this.currentFrame++
+		this.checkFrameData()
+		this.checkInput()
+
+
+	},
+	checkFrameData: function() {
+		if(this.frameDrops.length) {
+			const df = this.frameDrops[0]
+			if(df.frame <= this.currentFrame) {
+				for(let i = 0; i < df.drops; i++) {
+					this.dropCoin(df.choices)
 				}
-				break;
-			}
-			case 'gameover': {
-				if(!this.runOnce) {
-					this.stateGameover();
-					this.runOnce = true;
-				}
-				break;
-			}
-			case 'playing': {
-				this.statePlaying();
-			}
-			default: {
+				this.frameDrops.shift()
 			}
 		}
 	},
+	checkInput: function() {
+		if(this.cursors.right.isDown) {
+			this.player.x += PLAYER_SPEED
+			this.player.scale.x = 0.4
+		} else if(this.cursors.left.isDown) {
+			this.player.x -= PLAYER_SPEED
+			this.player.scale.x = -0.4
+		}
+	},
+	dropCoin: function(choices) {
+		console.log('drop coin!')
+		const temp = COLLECTIBLES.slice(0, choices+1)
+		let props = getRandomItem(temp)
+		let coin = this.coins.getFirstExists(false)
+		if(!coin) {
+		 coin = this.coins.create(0,0, props.texture)
+		 this.game.physics.arcade.enable(coin)
+	 } else {
+		 coin.loadTexture(props.texture)
+
+	 }
+		coin.scale.setTo(0.25)
+		coin.collectibleValue = props.value
+		const x = this.rnd.integerInRange(coin.width, this.world.width - coin.width)
+		const y = -coin.height * 0.5
+		coin.reset(x, y)
+		coin.body.velocity.set(0, COIN_SPEED);
+		coin.checkWorldBounds = true
+		coin.outOfBoundsKill = true
+		console.log('alive coin count:', this.coins.countLiving())
+	},
+
+
 	managePause: function() {
 		this.gamePaused =! this.gamePaused;
 		EPT._playAudio('click');
@@ -199,5 +346,7 @@ EPT.Game.prototype = {
 		this.stateStatus = 'playing';
 		// this.state.restart(true);
 		this.state.start('MainMenu');
+	},
+	render: function() {
 	}
 };
