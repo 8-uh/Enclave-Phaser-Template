@@ -42,7 +42,7 @@ var EPT = {
 			}
 		}
 		EPT.Storage.set('EPT-audio',EPT._audioStatus);
-		game.buttonAudio.setFrames(EPT._audioOffset+1, EPT._audioOffset+0, EPT._audioOffset+2);
+		// game.buttonAudio.setFrames(EPT._audioOffset+1, EPT._audioOffset+0, EPT._audioOffset+2);
 	},
 	_playAudio: function(sound) {
 		if(EPT._audioStatus) {
