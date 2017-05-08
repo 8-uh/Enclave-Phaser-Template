@@ -10,7 +10,7 @@ const COLLECTIBLES = [
 const LEVELS = [100, 200, 300, 400, 500]
 const GAME_TIME = 30
 const COIN_SPEED = 100
-const PLAYER_SPEED = 10
+const PLAYER_SPEED = 500
 
 const {getRandomItem} = Phaser.ArrayUtils
 const {ceil} = Math
@@ -50,7 +50,8 @@ EPT.Game.prototype = {
 		this.grassFront.anchor.setTo(1)
 
 		this.player = this.make.sprite(0, 0, 'gertie')
-		this.player.anchor.setTo(0.5, 1)
+
+
 
 		this.setObjectLocations()
 
@@ -91,8 +92,15 @@ EPT.Game.prototype = {
 		this.grassBack.y = height * 0.5 + this.grassBack.height * 0.3
 
 		this.player.scale.setTo(0.4)
+		this.player.anchor.setTo(0.5)
+		this.game.physics.arcade.enable(this.player)
+
 		this.player.x = width * 0.5
-		this.player.y = this.grassBack.y + this.grassBack.height - this.player.height * 0.4
+		this.player.y = height * 0.7
+		this.player.body.setSize(this.player.width*1.2, this.player.height * 0.15, this.player.width * 1.1, 0 )
+		this.player.body.collideWorldBounds = true
+
+
 
 		this.grassMid.x = 0
 		this.grassMid.y = height
@@ -107,10 +115,11 @@ EPT.Game.prototype = {
 		this.add.existing(this.mountain)
 		this.add.existing(this.sign)
 		this.add.existing(this.grassBack)
-		this.add.existing(this.player)
+
 		this.coins = this.game.add.group()
 		this.add.existing(this.grassMid)
 		this.add.existing(this.grassFront)
+this.add.existing(this.player)
 
 
 	},
@@ -209,6 +218,7 @@ EPT.Game.prototype = {
 		this.currentFrame++
 		this.checkFrameData()
 		this.checkInput()
+		this.checkCollisions()
 
 
 	},
@@ -225,12 +235,21 @@ EPT.Game.prototype = {
 	},
 	checkInput: function() {
 		if(this.cursors.right.isDown) {
-			this.player.x += PLAYER_SPEED
+			this.player.body.velocity.x = PLAYER_SPEED
 			this.player.scale.x = 0.4
 		} else if(this.cursors.left.isDown) {
-			this.player.x -= PLAYER_SPEED
+			this.player.body.velocity.x = -PLAYER_SPEED
 			this.player.scale.x = -0.4
+		} else {
+			this.player.body.velocity.x = 0
 		}
+	},
+	checkCollisions: function() {
+		this.game.physics.arcade.overlap(this.player, this.coins, this.collectCoin,null, this)
+	},
+	collectCoin: function(player, coin) {
+		coin.kill()
+		console.log('collected coin:', coin.collectibleValue)
 	},
 	dropCoin: function(choices) {
 		console.log('drop coin!')
@@ -239,20 +258,33 @@ EPT.Game.prototype = {
 		let coin = this.coins.getFirstExists(false)
 		if(!coin) {
 		 coin = this.coins.create(0,0, props.texture)
-		 this.game.physics.arcade.enable(coin)
+		 coin.anchor.setTo(0.5)
+		 coin.scale.setTo(0.25)
+
 	 } else {
 		 coin.loadTexture(props.texture)
 
 	 }
-		coin.scale.setTo(0.25)
+
+
 		coin.collectibleValue = props.value
 		const x = this.rnd.integerInRange(coin.width, this.world.width - coin.width)
 		const y = -coin.height * 0.5
 		coin.reset(x, y)
+		coin.touched = false
+		this.game.physics.arcade.enable(coin)
+		coin.body.height = 5
+		coin.body.offset = new Phaser.Point(0, coin.height * 4  -5)
 		coin.body.velocity.set(0, COIN_SPEED);
 		coin.checkWorldBounds = true
 		coin.outOfBoundsKill = true
 		console.log('alive coin count:', this.coins.countLiving())
+		coin.events.onKilled.add(() => {
+			if(coin.body) {
+				coin.body.destroy()
+			}
+
+		})
 	},
 
 
@@ -348,5 +380,9 @@ EPT.Game.prototype = {
 		this.state.start('MainMenu');
 	},
 	render: function() {
+		this.game.debug.body(this.player)
+		this.coins.forEachAlive(c => {
+			this.game.debug.body(c)
+		})
 	}
 };
