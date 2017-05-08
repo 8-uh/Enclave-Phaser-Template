@@ -17,7 +17,7 @@ EPT.Preloader.prototype = {
 		}
 	},
 	create: function() {
-		this.state.start('Game', true, false, true);
+		this.state.start('MainMenu', true, false, true);
 	}
 };
 EPT.Preloader.resources = {
